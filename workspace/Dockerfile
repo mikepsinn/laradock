@@ -279,14 +279,19 @@ USER root
 ARG INSTALL_TIDEWAYS=false
 
 RUN if [ ${INSTALL_TIDEWAYS} = true ]; then \
+    apt-get -y install sudo wget && \
+    # Install the php aerospike extension
+    curl -L -o /tmp/php-xhprof-extension.tar.gz https://github.com/tideways/php-xhprof-extension/archive/v4.1.6.tar.gz && \
+    mkdir -p php-xhprof-extension && \
+    tar -C php-xhprof-extension -zxvf /tmp/php-xhprof-extension.tar.gz --strip 1 && \
     cd php-xhprof-extension && \
-    update-alternatives --set php /usr/bin/php${LARADOCK_PHP_VERSION} \
-    update-alternatives --set php-config /usr/bin/php-config${LARADOCK_PHP_VERSION} \
-    update-alternatives --set phpize /usr/bin/phpize${LARADOCK_PHP_VERSION} \
-    phpize${LARADOCK_PHP_VERSION} \
-    ./configure --enable-tideways-xhprof --with-php-config=php-config${LARADOCK_PHP_VERSION} \
+    update-alternatives --set php /usr/bin/php${LARADOCK_PHP_VERSION} && \
+    update-alternatives --set php-config /usr/bin/php-config${LARADOCK_PHP_VERSION} && \
+    update-alternatives --set phpize /usr/bin/phpize${LARADOCK_PHP_VERSION} && \
+    phpize${LARADOCK_PHP_VERSION} && \
+    ./configure --enable-tideways-xhprof --with-php-config=php-config${LARADOCK_PHP_VERSION} && \
     make && \
-    make install && \
+    make install \
 ;fi
 
 # ADD for profiling
