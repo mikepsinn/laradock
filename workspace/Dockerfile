@@ -269,6 +269,28 @@ COPY ./xdebug.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini
 RUN sed -i "s/xdebug.remote_autostart=0/xdebug.remote_autostart=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
     sed -i "s/xdebug.remote_enable=0/xdebug.remote_enable=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini && \
     sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/xdebug.ini
+    
+###########################################################################
+# Tideways:
+###########################################################################
+
+USER root
+
+ARG INSTALL_TIDEWAYS=false
+
+RUN if [ ${INSTALL_TIDEWAYS} = true ]; then \
+    cd php-xhprof-extension && \
+    update-alternatives --set php /usr/bin/php${LARADOCK_PHP_VERSION} \
+    update-alternatives --set php-config /usr/bin/php-config${LARADOCK_PHP_VERSION} \
+    update-alternatives --set phpize /usr/bin/phpize${LARADOCK_PHP_VERSION} \
+    phpize${LARADOCK_PHP_VERSION} \
+    ./configure --enable-tideways-xhprof --with-php-config=php-config${LARADOCK_PHP_VERSION} \
+    make && \
+    make install && \
+;fi
+
+# ADD for profiling
+COPY ./tideways.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/tideways.ini
 
 ###########################################################################
 # Phpdbg:
