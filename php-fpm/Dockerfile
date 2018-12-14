@@ -521,6 +521,56 @@ RUN if [ ${INSTALL_CALENDAR} = true ]; then \
 ;fi
 
 ###########################################################################
+# Tideways: TODO: NOT TESTED YET.  It probably won't work because we use Alpine: https://support.tideways.com/article/89-install-in-docker-with-compose
+###########################################################################
+
+USER root
+
+ARG INSTALL_TIDEWAYS=false
+
+RUN if [ ${INSTALL_TIDEWAYS} = true ]; then \
+    cp "${DIR}/tideways.ini" "/etc/php/${LARADOCK_PHP_VERSION}/mods-available/tideways_xhprof.ini" && \
+    cp "${DIR}/mongodb.ini" "/etc/php/${LARADOCK_PHP_VERSION}/mods-available/mongodb.ini" && \
+    cp "${DIR}/xhgui-php.ini" "/etc/php/${LARADOCK_PHP_VERSION}/mods-available/xhgui.ini" && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 && \
+    echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list && \
+    sudo apt update && \
+    apt-get -y install mongodb-org re2c && \
+    sudo pecl install mongodb && \
+    ln -s /usr/lib/php/20151012/mongodb.so /usr/lib/php/20170718/mongodb.so && \
+    ln -s /usr/lib/php/20160303/mongodb.so /usr/lib/php/20170718/mongodb.so && \
+    phpenmod mongodb && \
+    # auto-remove records older than 2592000 seconds (30 days)
+    mongo xhprof --eval 'db.collection.ensureIndex( { "meta.request_ts" : 1 }, { expireAfterSeconds : 2592000 } )' && \
+    # indexes
+    mongo xhprof --eval  "db.collection.ensureIndex( { 'meta.SERVER.REQUEST_TIME' : -1 } )" && \
+    mongo xhprof --eval  "db.collection.ensureIndex( { 'profile.main().wt' : -1 } )" && \
+    mongo xhprof --eval  "db.collection.ensureIndex( { 'profile.main().mu' : -1 } )" && \
+    mongo xhprof --eval  "db.collection.ensureIndex( { 'profile.main().cpu' : -1 } )" && \
+    mongo xhprof --eval  "db.collection.ensureIndex( { 'meta.url' : 1 } )" && \
+    update-rc.d mongodb defaults && \
+    update-rc.d mongodb enable && \
+    echo "Installing/update Tideways to PHP ${LARADOCK_PHP_VERSION}" && \
+    git clone "https://github.com/tideways/php-xhprof-extension" "/var/local/tideways-php${LARADOCK_PHP_VERSION}" && \
+    cd "/var/local/tideways-php${LARADOCK_PHP_VERSION}" && \
+    update-alternatives --set php /usr/bin/php${LARADOCK_PHP_VERSION} && \
+    update-alternatives --set php-config /usr/bin/php-config${LARADOCK_PHP_VERSION} && \
+    update-alternatives --set phpize /usr/bin/phpize${LARADOCK_PHP_VERSION} && \
+    phpize${LARADOCK_PHP_VERSION} && \
+    ./configure --enable-tideways-xhprof --with-php-config=php-config${LARADOCK_PHP_VERSION} && \
+    make && \
+    make install && \
+    phpenmod tideways_xhprof && \
+    echo -e "\nDownloading xhgui, see https://github.com/perftools/xhgui" && \
+    git clone "https://github.com/perftools/xhgui" "/srv/www/default/xhgui" && \
+    cd /srv/www/default/xhgui && \
+    php install.php && \
+    cp "${DIR}/config.php" "/srv/www/default/xhgui/config/config.php" && \
+    cp "${DIR}/tideways-header.php" "/srv/www/default/xhgui/config/tideways-header.php" && \
+    cp "${DIR}/nginx.conf" "/etc/nginx/custom-sites/xhgui.conf" \
+;fi
+
+###########################################################################
 # Phalcon:
 ###########################################################################
 
